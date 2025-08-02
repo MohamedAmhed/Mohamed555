@@ -1,0 +1,1522 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام إدارة حضور وانصراف الموظفين</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <style>
+        :root {
+            --primary: #2c6e49;
+            --secondary: #4c956c;
+            --light: #fefee3;
+            --accent: #ff9e00;
+            --dark: #1d3557;
+            --danger: #e63946;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #e0f7fa, #f5f5f5);
+            color: #333;
+            line-height: 1.6;
+            min-height: 100vh;
+            padding: 0;
+            margin: 0;
+        }
+        
+        header {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            text-align: center;
+            padding: 1.5rem 1rem;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            border-bottom: 3px solid rgba(255, 255, 255, 0.1);
+            border-top: 3px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+        }
+        
+        header h1 {
+            font-size: 2.2rem;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.2);
+        }
+        
+        header h1 i {
+            color: var(--accent);
+        }
+        
+        header p {
+            margin: 0;
+            font-size: 1.1rem;
+            opacity: 0.9;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+        }
+        
+        .nav-container {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 20px 0;
+            padding: 0 10px;
+        }
+        
+        .nav-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .nav-btn:hover {
+            background: var(--secondary);
+            transform: translateY(-3px);
+        }
+        
+        .nav-btn.active {
+            background: var(--accent);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        
+        .section {
+            display: none;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 5px 25px rgba(0, 0, 0, 0.1);
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+        
+        .section.active {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .section-title {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            margin-bottom: 1.5rem;
+            color: var(--dark);
+            border-bottom: 2px solid var(--secondary);
+            padding-bottom: 0.8rem;
+        }
+        
+        .section-title i {
+            font-size: 1.5rem;
+        }
+        
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-group {
+            margin-bottom: 1.2rem;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 0.6rem;
+            font-weight: 600;
+            color: var(--dark);
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 0.9rem 1.2rem;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border 0.3s ease;
+        }
+        
+        .form-control:focus {
+            outline: none;
+            border-color: var(--secondary);
+            box-shadow: 0 0 0 3px rgba(76, 149, 108, 0.2);
+        }
+        
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.7rem;
+            padding: 0.9rem 1.8rem;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .btn:hover {
+            background: var(--secondary);
+            transform: translateY(-2px);
+        }
+        
+        .btn i {
+            font-size: 1.1rem;
+        }
+        
+        .btn-block {
+            display: block;
+            width: 100%;
+        }
+        
+        .table-container {
+            overflow-x: auto;
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            background: white;
+            margin-top: 20px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 800px;
+        }
+        
+        th, td {
+            padding: 1.1rem 1.3rem;
+            text-align: right;
+            border-bottom: 1px solid #eee;
+        }
+        
+        th {
+            background: var(--primary);
+            color: white;
+            font-weight: 600;
+        }
+        
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        
+        tr:hover {
+            background-color: #f1f8e9;
+        }
+        
+        .now-button {
+            background-color: #2196F3;
+            margin-top: 5px;
+            padding: 0.5rem;
+            border-radius: 4px;
+            color: white;
+            border: none;
+            cursor: pointer;
+            width: 100%;
+        }
+        
+        .now-button:hover {
+            background-color: #0b7dda;
+        }
+        
+        .bonus {
+            color: green;
+            font-weight: bold;
+        }
+        
+        .weekly-bonus {
+            background-color: #e8f5e9;
+            font-weight: bold;
+        }
+        
+        .total-row {
+            background-color: #4CAF50;
+            color: white;
+            font-weight: bold;
+        }
+        
+        .delete-btn {
+            background-color: #f44336;
+            color: white;
+            border: none;
+            padding: 0.5rem;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .delete-btn:hover {
+            background-color: #d32f2f;
+        }
+        
+        .download-btn {
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            padding: 0.5rem;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .download-btn:hover {
+            background-color: #0b7dda;
+        }
+        
+        .reset-btn {
+            background-color: #ff9800;
+            color: white;
+            border: none;
+            padding: 0.5rem;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .reset-btn:hover {
+            background-color: #e68a00;
+        }
+        
+        .excel-btn {
+            background-color: #1d6f42;
+            color: white;
+            border: none;
+            padding: 0.5rem;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .excel-btn:hover {
+            background-color: #165a34;
+        }
+        
+        footer {
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            color: white;
+            text-align: center;
+            padding: 1.8rem 1rem;
+            margin-top: 3rem;
+        }
+        
+        .footer-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        /* رسائل الخطأ والنجاح */
+        .alert {
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            font-weight: bold;
+            text-align: center;
+        }
+        
+        .alert-success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .alert-error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        /* تحسينات التقرير */
+        .report-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .chart-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+        
+        .chart-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+        }
+        
+        .chart-title {
+            text-align: center;
+            margin-bottom: 15px;
+            color: var(--dark);
+            font-weight: 600;
+        }
+        
+        .bonus-info {
+            background: #e8f5e9;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 20px 0;
+            border-left: 4px solid #4CAF50;
+        }
+        
+        .bonus-info h3 {
+            margin-bottom: 10px;
+            color: #2e7d32;
+        }
+        
+        .bonus-levels {
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .bonus-level {
+            background: white;
+            border-radius: 8px;
+            padding: 10px 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            flex: 1;
+            min-width: 120px;
+            text-align: center;
+            border: 1px solid #ddd;
+        }
+        
+        .bonus-level.active {
+            border: 2px solid var(--accent);
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(255, 158, 0, 0.3);
+        }
+        
+        .bonus-level h4 {
+            color: var(--primary);
+            margin-bottom: 5px;
+        }
+        
+        .bonus-level p {
+            font-weight: bold;
+            color: #2e7d32;
+            font-size: 1.1rem;
+        }
+        
+        .export-options {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .excel-icon {
+            background-color: #1d6f42;
+            padding: 10px;
+            border-radius: 5px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-left: 5px;
+        }
+        
+        .excel-icon i {
+            color: white;
+        }
+        
+        @media (max-width: 768px) {
+            header h1 {
+                font-size: 1.8rem;
+            }
+            
+            .section {
+                padding: 1.5rem;
+            }
+            
+            .nav-btn {
+                padding: 10px 15px;
+                font-size: 0.9rem;
+            }
+            
+            .chart-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .bonus-levels {
+                flex-direction: column;
+            }
+            
+            .export-options {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>
+            <i class="fas fa-fingerprint"></i>
+            نظام إدارة حضور وانصراف الموظفين
+        </h1>
+        <p>نظام متكامل لتسجيل وإدارة حضور الموظفين بدقة وكفاءة</p>
+    </header>
+    
+    <div class="nav-container">
+        <button class="nav-btn active" data-section="employeeRegistration">
+            <i class="fas fa-user-plus"></i> تسجيل موظف
+        </button>
+        <button class="nav-btn" data-section="employeeManagement">
+            <i class="fas fa-sign-in-alt"></i> الحضور
+        </button>
+        <button class="nav-btn" data-section="employeeCheckOut">
+            <i class="fas fa-sign-out-alt"></i> الانصراف
+        </button>
+        <button class="nav-btn" data-section="registeredEmployees">
+            <i class="fas fa-list"></i> السجلات
+        </button>
+        <button class="nav-btn" data-section="weeklyReport">
+            <i class="fas fa-chart-bar"></i> التقرير
+        </button>
+    </div>
+    
+    <div class="container">
+        <!-- رسائل التنبيه -->
+        <div id="alertContainer"></div>
+        
+        <!-- تسجيل الموظفين -->
+        <div class="section active" id="employeeRegistration">
+            <h2 class="section-title">
+                <i class="fas fa-user-plus"></i>
+                تسجيل موظف جديد
+            </h2>
+            
+            <form id="employeeForm">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="employeeName">اسم الموظف بالكامل</label>
+                        <input type="text" id="employeeName" class="form-control" placeholder="أدخل الاسم بالكامل" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="employeeId">رقم الموظف</label>
+                        <input type="text" id="employeeId" class="form-control" placeholder="أدخل الرقم التعريفي" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="hourlyRate">سعر الساعة (جنيه)</label>
+                        <input type="number" id="hourlyRate" class="form-control" min="0" step="0.01" placeholder="أدخل سعر الساعة" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="editEmployeeName">إدارة الموظفين:</label>
+                        <select id="editEmployeeName" class="form-control"></select>
+                        <button type="button" class="delete-btn" onclick="deleteEmployee()" style="margin-top: 10px;">
+                            <i class="fas fa-trash"></i> حذف الموظف
+                        </button>
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn btn-block">
+                    <i class="fas fa-save"></i>
+                    حفظ بيانات الموظف
+                </button>
+            </form>
+        </div>
+        
+        <!-- تسجيل الحضور -->
+        <div class="section" id="employeeManagement">
+            <h2 class="section-title">
+                <i class="fas fa-sign-in-alt"></i>
+                تسجيل الحضور
+            </h2>
+            
+            <form id="checkInForm">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="checkInEmployee">اسم الموظف</label>
+                        <select id="checkInEmployee" class="form-control" required>
+                            <option value="">اختر الموظف</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="checkInDate">التاريخ</label>
+                        <input type="date" id="checkInDate" class="form-control" required>
+                        <button type="button" class="now-button" onclick="setToday('checkInDate')">
+                            <i class="fas fa-calendar-day"></i> التاريخ الحالي
+                        </button>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="checkInTime">وقت الحضور</label>
+                        <input type="time" id="checkInTime" class="form-control" required>
+                        <button type="button" class="now-button" onclick="setCurrentTime('checkInTime')">
+                            <i class="fas fa-clock"></i> الوقت الحالي
+                        </button>
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn btn-block">
+                    <i class="fas fa-check-circle"></i>
+                    تسجيل الحضور
+                </button>
+            </form>
+        </div>
+        
+        <!-- تسجيل الانصراف -->
+        <div class="section" id="employeeCheckOut">
+            <h2 class="section-title">
+                <i class="fas fa-sign-out-alt"></i>
+                تسجيل الانصراف
+            </h2>
+            
+            <form id="checkOutForm">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="checkOutEmployee">اسم الموظف</label>
+                        <select id="checkOutEmployee" class="form-control" required>
+                            <option value="">اختر الموظف</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="checkOutDate">التاريخ</label>
+                        <input type="date" id="checkOutDate" class="form-control" required>
+                        <button type="button" class="now-button" onclick="setToday('checkOutDate')">
+                            <i class="fas fa-calendar-day"></i> التاريخ الحالي
+                        </button>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="checkOutTime">وقت الانصراف</label>
+                        <input type="time" id="checkOutTime" class="form-control" required>
+                        <button type="button" class="now-button" onclick="setCurrentTime('checkOutTime')">
+                            <i class="fas fa-clock"></i> الوقت الحالي
+                        </button>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="deduction">الخصم (جنيه)</label>
+                        <input type="number" id="deduction" class="form-control" min="0" step="0.01" placeholder="أدخل قيمة الخصم">
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn btn-block">
+                    <i class="fas fa-check-circle"></i>
+                    تسجيل الانصراف
+                </button>
+            </form>
+        </div>
+        
+        <!-- عرض سجلات الحضور -->
+        <div class="section" id="registeredEmployees">
+            <h2 class="section-title">
+                <i class="fas fa-list-alt"></i>
+                سجلات الحضور
+            </h2>
+            
+            <div class="table-container">
+                <table id="attendanceTable">
+                    <thead>
+                        <tr>
+                            <th>اسم الموظف</th>
+                            <th>تاريخ</th>
+                            <th>وقت الحضور</th>
+                            <th>وقت الانصراف</th>
+                            <th>ساعات العمل</th>
+                            <th>سعر الساعة</th>
+                            <th>الخصم</th>
+                            <th>الإجمالي</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- التقرير الأسبوعي -->
+        <div class="section" id="weeklyReport">
+            <h2 class="section-title">
+                <i class="fas fa-chart-pie"></i>
+                التقرير الأسبوعي
+            </h2>
+            
+            <div class="bonus-info">
+                <h3><i class="fas fa-gift"></i> نظام المكافآت الأسبوعية</h3>
+                <p>نظام المكافآت يعتمد على إجمالي ساعات العمل الأسبوعية للموظف:</p>
+                <div class="bonus-levels">
+                    <div class="bonus-level">
+                        <h4>96+ ساعة</h4>
+                        <p>16 ساعة مكافأة</p>
+                    </div>
+                    <div class="bonus-level">
+                        <h4>84-95 ساعة</h4>
+                        <p>14 ساعة مكافأة</p>
+                    </div>
+                    <div class="bonus-level">
+                        <h4>72-83 ساعة</h4>
+                        <p>12 ساعة مكافأة</p>
+                    </div>
+                    <div class="bonus-level">
+                        <h4>60-71 ساعة</h4>
+                        <p>10 ساعة مكافأة</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="weeklyReportDate">اختر تاريخ الأربعاء (نهاية الأسبوع):</label>
+                <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                    <input type="date" id="weeklyReportDate" class="form-control">
+                    <button class="btn" onclick="generateWeeklyReport()">
+                        <i class="fas fa-eye"></i> عرض التقرير
+                    </button>
+                </div>
+            </div>
+            
+            <div class="export-options">
+                <button class="excel-btn" onclick="exportToExcel()">
+                    <i class="fas fa-file-excel"></i> تصدير إلى Excel
+                </button>
+                <button class="download-btn" onclick="downloadWeeklyReport()">
+                    <i class="fas fa-download"></i> تنزيل كملف CSV
+                </button>
+                <button class="reset-btn" onclick="resetWeeklyData()">
+                    <i class="fas fa-trash"></i> حذف بيانات الأسبوع
+                </button>
+            </div>
+            
+            <div class="chart-container">
+                <div class="chart-card">
+                    <h3 class="chart-title">توزيع ساعات العمل</h3>
+                    <canvas id="hoursChart"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h3 class="chart-title">توزيع الرواتب</h3>
+                    <canvas id="salaryChart"></canvas>
+                </div>
+            </div>
+            
+            <div class="table-container">
+                <table id="weeklyReportTable">
+                    <thead>
+                        <tr>
+                            <th>اسم الموظف</th>
+                            <th>سعر الساعة</th>
+                            <th>إجمالي ساعات العمل</th>
+                            <th>إجمالي الخصومات</th>
+                            <th>مكافأة الأسبوع</th>
+                            <th>إجمالي الراتب</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                    <tfoot id="weeklyReportFooter"></tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <footer>
+        <div class="footer-content">
+            <h3>نظام إدارة حضور وانصراف الموظفين</h3>
+            <p>الحل الأمثل لمتابعة وتقييم أداء الموظفين بدقة وكفاءة</p>
+            <p>جميع الحقوق محفوظة © <span id="currentYear"></span> - أبو أحمد</p>
+        </div>
+    </footer>
+
+    <script>
+        // بيانات التطبيق
+        let employees = JSON.parse(localStorage.getItem('employees')) || [];
+        let attendanceRecords = JSON.parse(localStorage.getItem('attendanceRecords')) || [];
+        let hoursChart = null;
+        let salaryChart = null;
+
+        // تهيئة الصفحة عند التحميل
+        document.addEventListener("DOMContentLoaded", function() {
+            // عرض السنة الحالية
+            document.getElementById('currentYear').textContent = new Date().getFullYear();
+            
+            // تعيين التواريخ الافتراضية
+            setToday('checkInDate');
+            setToday('checkOutDate');
+            setToday('weeklyReportDate');
+            
+            // تحديث القوائم المنسدلة
+            updateEmployeeSelects();
+            
+            // إعداد معالجات الأحداث
+            setupEventHandlers();
+            
+            // إعداد التنقل بين الأقسام
+            setupNavigation();
+            
+            // إظهار رسالة ترحيب
+            showAlert('مرحبًا بك في نظام إدارة حضور وانصراف الموظفين!', 'success');
+            
+            // توليد تقرير تلقائي عند فتح قسم التقرير
+            generateWeeklyReport();
+        });
+
+        // إعداد التنقل بين الأقسام
+        function setupNavigation() {
+            const navButtons = document.querySelectorAll('.nav-btn');
+            
+            navButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    // إزالة النشط من جميع الأزرار
+                    navButtons.forEach(btn => btn.classList.remove('active'));
+                    
+                    // إضافة النشط للزر المحدد
+                    this.classList.add('active');
+                    
+                    // إخفاء جميع الأقسام
+                    document.querySelectorAll('.section').forEach(section => {
+                        section.classList.remove('active');
+                    });
+                    
+                    // إظهار القسم المحدد
+                    const sectionId = this.dataset.section;
+                    document.getElementById(sectionId).classList.add('active');
+                    
+                    // إذا كان القسم هو التقرير الأسبوعي، قم بتوليد التقرير تلقائيًا
+                    if (sectionId === 'weeklyReport') {
+                        generateWeeklyReport();
+                    }
+                });
+            });
+        }
+
+        // تحديث قوائم الموظفين
+        function updateEmployeeSelects() {
+            const selects = [
+                'editEmployeeName', 
+                'checkInEmployee', 
+                'checkOutEmployee'
+            ];
+            
+            selects.forEach(selectId => {
+                const select = document.getElementById(selectId);
+                select.innerHTML = '';
+                
+                if (selectId === 'editEmployeeName' || selectId === 'checkInEmployee' || selectId === 'checkOutEmployee') {
+                    const defaultOption = document.createElement('option');
+                    defaultOption.value = '';
+                    defaultOption.textContent = 'اختر الموظف';
+                    select.appendChild(defaultOption);
+                }
+                
+                employees.forEach(employee => {
+                    const option = document.createElement('option');
+                    option.value = employee.id;
+                    option.textContent = employee.name;
+                    select.appendChild(option);
+                });
+            });
+        }
+
+        // تعيين التاريخ الحالي
+        function setToday(elementId) {
+            const today = new Date();
+            const dateStr = today.toISOString().split('T')[0];
+            document.getElementById(elementId).value = dateStr;
+        }
+
+        // تعيين الوقت الحالي
+        function setCurrentTime(elementId) {
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            document.getElementById(elementId).value = `${hours}:${minutes}`;
+        }
+
+        // حذف موظف
+        function deleteEmployee() {
+            const employeeId = document.getElementById('editEmployeeName').value;
+            if (!employeeId) {
+                showAlert('الرجاء اختيار موظف', 'error');
+                return;
+            }
+            
+            const employee = employees.find(emp => emp.id === employeeId);
+            if (!employee) {
+                showAlert('الموظف غير موجود', 'error');
+                return;
+            }
+            
+            if (confirm(`هل أنت متأكد من حذف الموظف ${employee.name}؟ سيتم حذف جميع سجلاته أيضًا`)) {
+                // حذف الموظف من القائمة
+                employees = employees.filter(emp => emp.id !== employeeId);
+                
+                // حذف سجلات الموظف
+                attendanceRecords = attendanceRecords.filter(rec => rec.employeeId !== employeeId);
+                
+                // حفظ التغييرات
+                saveData();
+                
+                // تحديث الواجهة
+                updateEmployeeSelects();
+                renderAttendanceTable();
+                
+                showAlert('تم حذف الموظف بنجاح', 'success');
+            }
+        }
+
+        // حساب ساعات العمل مع مراعاة العمل بعد منتصف الليل
+        function calculateWorkHours(checkInDate, checkInTime, checkOutDate, checkOutTime) {
+            const checkIn = new Date(`${checkInDate}T${checkInTime}`);
+            let checkOut = new Date(`${checkOutDate}T${checkOutTime}`);
+            
+            // إذا كان وقت الانصراف قبل وقت الحضور (يعني العمل بعد منتصف الليل)
+            if (checkOut < checkIn) {
+                checkOut.setDate(checkOut.getDate() + 1);
+            }
+            
+            const diffMs = checkOut - checkIn;
+            return diffMs / (1000 * 60 * 60); // تحويل إلى ساعات
+        }
+
+        // حساب إجمالي ساعات العمل الأسبوعية
+        function calculateWeeklyHours(employeeId, startDate, endDate) {
+            const weeklyRecords = attendanceRecords.filter(rec => 
+                rec.employeeId === employeeId && 
+                new Date(rec.date) >= new Date(startDate) && 
+                new Date(rec.date) <= new Date(endDate) &&
+                rec.checkIn && 
+                rec.checkOut
+            );
+            
+            let totalHours = 0;
+            weeklyRecords.forEach(record => {
+                totalHours += calculateWorkHours(record.date, record.checkIn, record.date, record.checkOut);
+            });
+            
+            return totalHours;
+        }
+
+        // حساب المكافأة بناءً على ساعات العمل الأسبوعية
+        function calculateBonusHours(totalHours) {
+            if (totalHours >= 96) return 16;
+            if (totalHours >= 84) return 14;
+            if (totalHours >= 72) return 12;
+            if (totalHours >= 60) return 10;
+            return 0;
+        }
+
+        // حساب الراتب الأسبوعي مع المكافأة
+        function calculateWeeklySalary(employeeId, wednesdayDate) {
+            const employee = employees.find(emp => emp.id === employeeId);
+            if (!employee) return {
+                totalHours: 0,
+                totalDeductions: 0,
+                bonusHours: 0,
+                totalSalary: 0
+            };
+            
+            // حساب فترة الأسبوع (من الخميس إلى الأربعاء)
+            const startDate = new Date(wednesdayDate);
+            startDate.setDate(startDate.getDate() - 6); // الخميس السابق
+            
+            const totalHours = calculateWeeklyHours(employeeId, startDate, wednesdayDate);
+            const weeklyRecords = attendanceRecords.filter(rec => 
+                rec.employeeId === employeeId && 
+                new Date(rec.date) >= startDate && 
+                new Date(rec.date) <= new Date(wednesdayDate)
+            );
+            
+            let totalDeductions = 0;
+            weeklyRecords.forEach(record => {
+                totalDeductions += record.deduction || 0;
+            });
+            
+            // حساب المكافأة بناءً على ساعات العمل
+            const bonusHours = calculateBonusHours(totalHours);
+            const totalSalary = (employee.hourlyRate * totalHours) - totalDeductions + (employee.hourlyRate * bonusHours);
+            
+            return {
+                totalHours,
+                totalDeductions,
+                bonusHours,
+                totalSalary
+            };
+        }
+
+        // عرض سجلات الحضور
+        function renderAttendanceTable() {
+            const tableBody = document.querySelector('#attendanceTable tbody');
+            tableBody.innerHTML = '';
+            
+            if (attendanceRecords.length === 0) {
+                const row = document.createElement('tr');
+                row.innerHTML = '<td colspan="8" style="text-align:center">لا توجد سجلات متاحة</td>';
+                tableBody.appendChild(row);
+                return;
+            }
+            
+            // فرز السجلات حسب التاريخ
+            const sortedRecords = [...attendanceRecords].sort((a, b) => new Date(b.date) - new Date(a.date));
+            
+            sortedRecords.forEach(record => {
+                if (!record.checkIn || !record.checkOut) return;
+                
+                const employee = employees.find(emp => emp.id === record.employeeId);
+                if (!employee) return;
+                
+                const workHours = calculateWorkHours(record.date, record.checkIn, record.date, record.checkOut);
+                const dailySalary = (employee.hourlyRate * workHours) - (record.deduction || 0);
+                
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${employee.name}</td>
+                    <td>${record.date}</td>
+                    <td>${record.checkIn}</td>
+                    <td>${record.checkOut}</td>
+                    <td>${workHours.toFixed(2)}</td>
+                    <td>${employee.hourlyRate.toFixed(2)} جنيه</td>
+                    <td>${record.deduction ? record.deduction.toFixed(2) + ' جنيه' : '0.00 جنيه'}</td>
+                    <td>${dailySalary.toFixed(2)} جنيه</td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+
+        // إنشاء التقرير الأسبوعي
+        function generateWeeklyReport() {
+            const wednesdayDate = document.getElementById('weeklyReportDate').value;
+            if (!wednesdayDate) {
+                showAlert('الرجاء اختيار تاريخ نهاية الأسبوع', 'error');
+                return;
+            }
+            
+            const wednesday = new Date(wednesdayDate);
+            if (wednesday.toString() === 'Invalid Date') {
+                showAlert('تاريخ غير صحيح', 'error');
+                return;
+            }
+            
+            const tableBody = document.querySelector('#weeklyReportTable tbody');
+            tableBody.innerHTML = '';
+            
+            let grandTotalHours = 0;
+            let grandTotalDeductions = 0;
+            let grandTotalBonus = 0;
+            let grandTotalSalary = 0;
+            
+            // بيانات للتخطيط البياني
+            const chartLabels = [];
+            const hoursData = [];
+            const salaryData = [];
+            const bonusData = [];
+            
+            employees.forEach(employee => {
+                const salaryInfo = calculateWeeklySalary(employee.id, wednesdayDate);
+                
+                if (salaryInfo.totalHours > 0) {
+                    grandTotalHours += salaryInfo.totalHours;
+                    grandTotalDeductions += salaryInfo.totalDeductions;
+                    grandTotalBonus += salaryInfo.bonusHours;
+                    grandTotalSalary += salaryInfo.totalSalary;
+                    
+                    // إضافة بيانات للرسوم البيانية
+                    chartLabels.push(employee.name);
+                    hoursData.push(salaryInfo.totalHours);
+                    salaryData.push(salaryInfo.totalSalary);
+                    bonusData.push(salaryInfo.bonusHours);
+                    
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${employee.name}</td>
+                        <td>${employee.hourlyRate.toFixed(2)} جنيه</td>
+                        <td>${salaryInfo.totalHours.toFixed(2)}</td>
+                        <td>${salaryInfo.totalDeductions.toFixed(2)} جنيه</td>
+                        <td class="weekly-bonus">${salaryInfo.bonusHours > 0 ? salaryInfo.bonusHours.toFixed(2) + ' ساعة' : '-'}</td>
+                        <td>${salaryInfo.totalSalary.toFixed(2)} جنيه</td>
+                    `;
+                    tableBody.appendChild(row);
+                }
+            });
+            
+            // تحديث الرسوم البيانية
+            updateCharts(chartLabels, hoursData, salaryData, bonusData);
+            
+            // إضافة صف الإجمالي في تذييل الجدول
+            const tableFooter = document.querySelector('#weeklyReportTable tfoot');
+            tableFooter.innerHTML = '';
+            
+            if (grandTotalHours > 0) {
+                const totalRow = document.createElement('tr');
+                totalRow.className = 'total-row';
+                totalRow.innerHTML = `
+                    <td colspan="2">الإجمالي الأسبوعي</td>
+                    <td>${grandTotalHours.toFixed(2)}</td>
+                    <td>${grandTotalDeductions.toFixed(2)} جنيه</td>
+                    <td>${grandTotalBonus.toFixed(2)} ساعة</td>
+                    <td>${grandTotalSalary.toFixed(2)} جنيه</td>
+                `;
+                tableFooter.appendChild(totalRow);
+            } else {
+                const row = document.createElement('tr');
+                row.innerHTML = '<td colspan="6" style="text-align:center">لا توجد بيانات لهذا الأسبوع</td>';
+                tableFooter.appendChild(row);
+            }
+        }
+
+        // تحديث الرسوم البيانية
+        function updateCharts(labels, hoursData, salaryData, bonusData) {
+            const hoursCtx = document.getElementById('hoursChart').getContext('2d');
+            const salaryCtx = document.getElementById('salaryChart').getContext('2d');
+            
+            // تدمير المخططات القديمة إذا كانت موجودة
+            if (hoursChart) hoursChart.destroy();
+            if (salaryChart) salaryChart.destroy();
+            
+            // مخطط ساعات العمل
+            hoursChart = new Chart(hoursCtx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'ساعات العمل',
+                            data: hoursData,
+                            backgroundColor: '#4CAF50',
+                            borderColor: '#388E3C',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'المكافأة',
+                            data: bonusData,
+                            backgroundColor: '#FFC107',
+                            borderColor: '#FFA000',
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'ساعات العمل الأسبوعية',
+                            font: {
+                                size: 16
+                            }
+                        },
+                        legend: {
+                            position: 'top',
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'الساعات'
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // مخطط الرواتب
+            salaryChart = new Chart(salaryCtx, {
+                type: 'pie',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'الرواتب',
+                        data: salaryData,
+                        backgroundColor: [
+                            '#4CAF50', '#2196F3', '#FFC107', 
+                            '#9C27B0', '#FF5722', '#607D8B',
+                            '#795548', '#E91E63', '#3F51B5'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'توزيع الرواتب الأسبوعية',
+                            font: {
+                                size: 16
+                            }
+                        },
+                        legend: {
+                            position: 'bottom',
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.label}: ${context.raw.toFixed(2)} جنيه`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // تنزيل التقرير الأسبوعي كملف Excel
+        function exportToExcel() {
+            const wednesdayDate = document.getElementById('weeklyReportDate').value;
+            if (!wednesdayDate) {
+                showAlert('الرجاء اختيار تاريخ نهاية الأسبوع أولاً', 'error');
+                return;
+            }
+            
+            // إنشاء مصنف Excel
+            const wb = XLSX.utils.book_new();
+            
+            // إنشاء ورقة للبيانات الأساسية
+            const reportData = [
+                ["اسم الموظف", "سعر الساعة", "إجمالي ساعات العمل", "إجمالي الخصومات", "مكافأة الأسبوع", "إجمالي الراتب"]
+            ];
+            
+            let grandTotalHours = 0;
+            let grandTotalDeductions = 0;
+            let grandTotalBonus = 0;
+            let grandTotalSalary = 0;
+            
+            employees.forEach(employee => {
+                const salaryInfo = calculateWeeklySalary(employee.id, wednesdayDate);
+                if (salaryInfo.totalHours > 0) {
+                    reportData.push([
+                        employee.name,
+                        employee.hourlyRate,
+                        salaryInfo.totalHours.toFixed(2),
+                        salaryInfo.totalDeductions.toFixed(2),
+                        salaryInfo.bonusHours.toFixed(2),
+                        salaryInfo.totalSalary.toFixed(2)
+                    ]);
+                    
+                    grandTotalHours += salaryInfo.totalHours;
+                    grandTotalDeductions += salaryInfo.totalDeductions;
+                    grandTotalBonus += salaryInfo.bonusHours;
+                    grandTotalSalary += salaryInfo.totalSalary;
+                }
+            });
+            
+            // إضافة صف الإجمالي
+            reportData.push([]);
+            reportData.push(["الإجمالي الأسبوعي", "", grandTotalHours.toFixed(2), grandTotalDeductions.toFixed(2), grandTotalBonus.toFixed(2), grandTotalSalary.toFixed(2)]);
+            
+            const ws = XLSX.utils.aoa_to_sheet(reportData);
+            
+            // تنسيق الخلايا
+            if (!ws['!cols']) ws['!cols'] = [];
+            ws['!cols'][0] = { wch: 25 }; // اسم الموظف
+            ws['!cols'][1] = { wch: 15 }; // سعر الساعة
+            ws['!cols'][2] = { wch: 20 }; // ساعات العمل
+            ws['!cols'][3] = { wch: 20 }; // الخصومات
+            ws['!cols'][4] = { wch: 15 }; // المكافأة
+            ws['!cols'][5] = { wch: 20 }; // الراتب
+            
+            // إضافة الورقة إلى المصنف
+            XLSX.utils.book_append_sheet(wb, ws, "التقرير الأسبوعي");
+            
+            // إنشاء ورقة ثانية للتفاصيل
+            const detailsData = [
+                ["اسم الموظف", "التاريخ", "وقت الحضور", "وقت الانصراف", "ساعات العمل", "الخصم", "الإجمالي اليومي"]
+            ];
+            
+            employees.forEach(employee => {
+                const startDate = new Date(wednesdayDate);
+                startDate.setDate(startDate.getDate() - 6);
+                
+                const weeklyRecords = attendanceRecords.filter(rec => 
+                    rec.employeeId === employee.id && 
+                    new Date(rec.date) >= startDate && 
+                    new Date(rec.date) <= new Date(wednesdayDate) &&
+                    rec.checkIn && 
+                    rec.checkOut
+                );
+                
+                weeklyRecords.forEach(record => {
+                    const workHours = calculateWorkHours(record.date, record.checkIn, record.date, record.checkOut);
+                    const dailySalary = (employee.hourlyRate * workHours) - (record.deduction || 0);
+                    
+                    detailsData.push([
+                        employee.name,
+                        record.date,
+                        record.checkIn,
+                        record.checkOut,
+                        workHours.toFixed(2),
+                        record.deduction || 0,
+                        dailySalary.toFixed(2)
+                    ]);
+                });
+            });
+            
+            const wsDetails = XLSX.utils.aoa_to_sheet(detailsData);
+            
+            // تنسيق الخلايا للورقة الثانية
+            if (!wsDetails['!cols']) wsDetails['!cols'] = [];
+            wsDetails['!cols'][0] = { wch: 25 }; // اسم الموظف
+            wsDetails['!cols'][1] = { wch: 15 }; // التاريخ
+            wsDetails['!cols'][2] = { wch: 15 }; // وقت الحضور
+            wsDetails['!cols'][3] = { wch: 15 }; // وقت الانصراف
+            wsDetails['!cols'][4] = { wch: 15 }; // ساعات العمل
+            wsDetails['!cols'][5] = { wch: 15 }; // الخصم
+            wsDetails['!cols'][6] = { wch: 20 }; // الإجمالي اليومي
+            
+            XLSX.utils.book_append_sheet(wb, wsDetails, "تفاصيل الحضور");
+            
+            // تصدير الملف
+            XLSX.writeFile(wb, `تقرير_أسبوعي_${wednesdayDate}.xlsx`);
+            
+            showAlert('تم تصدير التقرير إلى Excel بنجاح', 'success');
+        }
+
+        // تنزيل التقرير الأسبوعي كملف CSV
+        function downloadWeeklyReport() {
+            const wednesdayDate = document.getElementById('weeklyReportDate').value;
+            if (!wednesdayDate) {
+                showAlert('الرجاء اختيار تاريخ نهاية الأسبوع أولاً', 'error');
+                return;
+            }
+            
+            let reportData = "اسم الموظف,سعر الساعة,إجمالي ساعات العمل,إجمالي الخصومات,مكافأة الأسبوع,إجمالي الراتب\n";
+            
+            employees.forEach(employee => {
+                const salaryInfo = calculateWeeklySalary(employee.id, wednesdayDate);
+                if (salaryInfo.totalHours > 0) {
+                    reportData += `${employee.name},${employee.hourlyRate},${salaryInfo.totalHours.toFixed(2)},`;
+                    reportData += `${salaryInfo.totalDeductions.toFixed(2)},${salaryInfo.bonusHours.toFixed(2)},`;
+                    reportData += `${salaryInfo.totalSalary.toFixed(2)}\n`;
+                }
+            });
+            
+            const blob = new Blob([reportData], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `تقرير_أسبوعي_${wednesdayDate}.csv`;
+            link.click();
+            URL.revokeObjectURL(url);
+            
+            showAlert('تم تنزيل التقرير كملف CSV بنجاح', 'success');
+        }
+
+        // حذف بيانات الأسبوع
+        function resetWeeklyData() {
+            const wednesdayDate = document.getElementById('weeklyReportDate').value;
+            if (!wednesdayDate) {
+                showAlert('الرجاء اختيار تاريخ نهاية الأسبوع أولاً', 'error');
+                return;
+            }
+            
+            if (!confirm('هل أنت متأكد من حذف بيانات هذا الأسبوع؟ لا يمكن التراجع عن هذا الإجراء')) {
+                return;
+            }
+            
+            const startDate = new Date(wednesdayDate);
+            startDate.setDate(startDate.getDate() - 6);
+            
+            attendanceRecords = attendanceRecords.filter(rec => 
+                new Date(rec.date) < startDate || new Date(rec.date) > new Date(wednesdayDate)
+            );
+            
+            saveData();
+            renderAttendanceTable();
+            generateWeeklyReport();
+            showAlert('تم حذف بيانات الأسبوع بنجاح', 'success');
+        }
+
+        // حفظ البيانات
+        function saveData() {
+            localStorage.setItem('employees', JSON.stringify(employees));
+            localStorage.setItem('attendanceRecords', JSON.stringify(attendanceRecords));
+        }
+
+        // إعداد معالجات الأحداث
+        function setupEventHandlers() {
+            // تسجيل موظف جديد
+            document.getElementById('employeeForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const name = document.getElementById('employeeName').value.trim();
+                const id = document.getElementById('employeeId').value.trim();
+                const hourlyRate = parseFloat(document.getElementById('hourlyRate').value);
+                
+                if (!name || !id || isNaN(hourlyRate) || hourlyRate <= 0) {
+                    showAlert('الرجاء إدخال بيانات صحيحة', 'error');
+                    return;
+                }
+                
+                // التحقق من عدم وجود موظف بنفس الاسم أو الرقم التعريفي
+                if (employees.some(emp => emp.name === name)) {
+                    showAlert('موظف بهذا الاسم مسجل بالفعل', 'error');
+                    return;
+                }
+                
+                if (employees.some(emp => emp.id === id)) {
+                    showAlert('موظف بهذا الرقم التعريفي مسجل بالفعل', 'error');
+                    return;
+                }
+                
+                // إضافة الموظف الجديد
+                employees.push({
+                    id: id,
+                    name: name,
+                    hourlyRate: hourlyRate
+                });
+                
+                // حفظ البيانات وتحديث الواجهة
+                saveData();
+                updateEmployeeSelects();
+                this.reset();
+                
+                showAlert('تم تسجيل الموظف بنجاح', 'success');
+            });
+            
+            // تسجيل الحضور
+            document.getElementById('checkInForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const employeeId = document.getElementById('checkInEmployee').value;
+                const date = document.getElementById('checkInDate').value;
+                const time = document.getElementById('checkInTime').value;
+                
+                // التحقق من عدم تسجيل حضور مسبق لنفس اليوم
+                const existingRecord = attendanceRecords.find(rec => 
+                    rec.employeeId === employeeId && 
+                    rec.date === date
+                );
+                
+                if (existingRecord && existingRecord.checkIn) {
+                    showAlert('تم تسجيل حضور لهذا الموظف اليوم بالفعل', 'error');
+                    return;
+                }
+                
+                const employee = employees.find(emp => emp.id === employeeId);
+                if (!employee) {
+                    showAlert('الموظف غير مسجل', 'error');
+                    return;
+                }
+                
+                // إضافة سجل الحضور
+                if (existingRecord) {
+                    existingRecord.checkIn = time;
+                } else {
+                    attendanceRecords.push({
+                        employeeId: employeeId,
+                        name: employee.name,
+                        date: date,
+                        checkIn: time,
+                        checkOut: '',
+                        deduction: 0
+                    });
+                }
+                
+                // حفظ البيانات وتحديث الواجهة
+                saveData();
+                this.reset();
+                setToday('checkInDate');
+                
+                showAlert('تم تسجيل الحضور بنجاح', 'success');
+            });
+            
+            // تسجيل الانصراف
+            document.getElementById('checkOutForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const employeeId = document.getElementById('checkOutEmployee').value;
+                const date = document.getElementById('checkOutDate').value;
+                const time = document.getElementById('checkOutTime').value;
+                const deduction = parseFloat(document.getElementById('deduction').value) || 0;
+                
+                // البحث عن سجل الحضور
+                const record = attendanceRecords.find(rec => 
+                    rec.employeeId === employeeId && 
+                    rec.date === date && 
+                    rec.checkIn && 
+                    !rec.checkOut
+                );
+                
+                if (!record) {
+                    showAlert('لا يوجد تسجيل حضور لهذا الموظف في هذا التاريخ', 'error');
+                    return;
+                }
+                
+                // حساب ساعات العمل للتحقق من صحتها
+                const workHours = calculateWorkHours(date, record.checkIn, date, time);
+                if (workHours <= 0) {
+                    showAlert('وقت الانصراف يجب أن يكون بعد وقت الحضور', 'error');
+                    return;
+                }
+                
+                // تحديث سجل الانصراف
+                record.checkOut = time;
+                record.deduction = deduction;
+                
+                // حفظ البيانات وتحديث الواجهة
+                saveData();
+                this.reset();
+                setToday('checkOutDate');
+                renderAttendanceTable();
+                
+                showAlert('تم تسجيل الانصراف بنجاح', 'success');
+            });
+        }
+
+        // عرض رسالة تنبيه
+        function showAlert(message, type) {
+            const alertContainer = document.getElementById('alertContainer');
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type}`;
+            alertDiv.textContent = message;
+            
+            alertContainer.innerHTML = '';
+            alertContainer.appendChild(alertDiv);
+            
+            // إخفاء الرسالة بعد 5 ثوانٍ
+            setTimeout(() => {
+                alertDiv.style.opacity = '0';
+                setTimeout(() => {
+                    alertDiv.remove();
+                }, 1000);
+            }, 5000);
+        }
+    </script>
+</body>
+</html>
